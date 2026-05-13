@@ -13,3 +13,10 @@ startCommand = "npx prisma generate && npx prisma db push --accept-data-loss && 
 
 [nixpacks]
 node_version = "20"
+
+# 声明 PostgreSQL 依赖，让 Railway 在启动前等待数据库就绪
+[nodejs]
+packages = []
+
+[postgres]
+name = "db"
