@@ -28,5 +28,8 @@ npx prisma generate
 echo "Running database migrations..."
 npx prisma db push --accept-data-loss --skip-generate
 
+echo "Seeding database with initial data..."
+node dist/seed.js
+
 echo "Starting application..."
 node dist/index.js
