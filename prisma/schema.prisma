@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL") // Railway会提供 PostgreSQL 连接字符串
 }
 
 // ===== 管理员用户（管理后台登录用户）=====
