@@ -7,7 +7,7 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 const helpers_1 = require("../utils/helpers");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
@@ -27,7 +27,7 @@ const storage = multer_1.default.diskStorage({
     },
     filename: (req, file, cb) => {
         const ext = path_1.default.extname(file.originalname);
-        const filename = `${(0, uuid_1.v4)()}${ext}`;
+        const filename = `${(0, crypto_1.randomUUID)()}${ext}`;
         cb(null, filename);
     },
 });
@@ -47,6 +47,12 @@ const upload = (0, multer_1.default)({
         fileSize: 2 * 1024 * 1024, // 2MB
     },
 });
+// 错误处理中间件
+function asyncHandler(fn) {
+    return (req, res, next) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+}
 // 封面上传
 router.post('/cover', auth_1.authMiddleware, upload.single('file'), asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -76,11 +82,5 @@ router.post('/file', auth_1.authMiddleware, upload.single('file'), asyncHandler(
         url,
     }, '上传成功');
 }));
-// 错误处理中间件
-function asyncHandler(fn) {
-    return (req, res, next) => {
-        Promise.resolve(fn(req, res, next)).catch(next);
-    };
-}
 exports.default = router;
 //# sourceMappingURL=upload.js.map
