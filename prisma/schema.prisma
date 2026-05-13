@@ -1,0 +1,467 @@
+// Prisma Schema for Novel Admin System
+// Based on PRD requirements
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ===== 管理员用户（管理后台登录用户）=====
+model User {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  email          String   @unique
+  password       String
+  name           String?
+  phone          String?
+  role           String   @default("admin")
+  status         String   @default("active")
+  deptId         String?
+  roleId         String?
+  lastLoginAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  createdNovels         Novel[]         @relation("NovelCreatedBy")
+  createdChapters       Chapter[]       @relation("ChapterCreatedBy")
+  createdCategories     Category[]      @relation("CategoryCreatedBy")
+  createdCompanies      CopyrightCompany[] @relation("CompanyCreatedBy")
+  createdProducts       Product[]       @relation("ProductCreatedBy")
+  createdPaymentWalls   PaymentWall[]   @relation("PaymentWallCreatedBy")
+  createdLandingPages   LandingPage[]   @relation("LandingPageCreatedBy")
+  createdFBAuths        FBAuthorization[] @relation("FBAuthCreatedBy")
+  createdPromoCodes     PromoCode[]     @relation("PromoCodeCreatedBy")
+  createdChannels       Channel[]       @relation("ChannelCreatedBy")
+  createdPricingTiers   PricingTier[]   @relation("PricingTierCreatedBy")
+  createdPricingTierNovels PricingTierNovel[] @relation("PricingTierNovelCreatedBy")
+  createdUserSegments   UserSegment[]   @relation("UserSegmentCreatedBy")
+  createdPaymentWallProducts PaymentWallProduct[] @relation("PaymentWallProductCreatedBy")
+  
+  dept              Department?  @relation(fields: [deptId], references: [id])
+  userRole          Role?        @relation(fields: [roleId], references: [id])
+  loginLogs         LoginLog[]
+  operationLogs     OperationLog[]
+  @@map("users")
+}
+
+// ===== App终端用户 =====
+model AppUser {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  email        String?
+  os           String?
+  coins        Int      @default(0)
+  isSubscribed Boolean  @default(false)
+  status       String   @default("active")
+  registeredAt DateTime @default(now())
+
+  orders Order[]
+  @@map("app_users")
+}
+
+// ===== 3.1 小说管理 =====
+
+model Category {
+  id          String   @id @default(cuid())
+  categoryId  String   @unique
+  name        String
+  chineseName String
+  status      String   @default("active")
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  novels      Novel[]
+  createdByUser User? @relation("CategoryCreatedBy", fields: [createdBy], references: [id])
+  @@map("categories")
+}
+
+model CopyrightCompany {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+  name        String
+  status      String   @default("active")
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  novels      Novel[]
+  createdByUser User? @relation("CompanyCreatedBy", fields: [createdBy], references: [id])
+  @@map("copyright_companies")
+}
+
+model Novel {
+  id              String   @id @default(cuid())
+  novelId         String   @unique
+  name            String
+  chineseName     String
+  categoryId      String
+  language        String   @default("english")
+  author          String?
+  copyrightCompanyId String
+  description     String?
+  authStartTime   DateTime?
+  authEndTime     DateTime?
+  coverImage      String
+  isChargeable    Boolean  @default(true)
+  wordCount       Int?
+  views           Int      @default(0)
+  manualViews     Int      @default(0)
+  status          String   @default("offline")
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category        Category @relation(fields: [categoryId], references: [id])
+  copyrightCompany CopyrightCompany @relation(fields: [copyrightCompanyId], references: [id])
+  chapters        Chapter[]
+  landingPages    LandingPage[]
+  promoCodes      PromoCode[]
+  pricingTierNovels PricingTierNovel[]
+  createdByUser   User? @relation("NovelCreatedBy", fields: [createdBy], references: [id])
+  @@map("novels")
+}
+
+model Chapter {
+  id            String   @id @default(cuid())
+  chapterId     String   @unique
+  novelId       String
+  title         String
+  chapterNumber Int
+  isChargeable  Boolean  @default(true)
+  price         Int?
+  content       String
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  novel         Novel @relation(fields: [novelId], references: [id])
+  createdByUser User? @relation("ChapterCreatedBy", fields: [createdBy], references: [id])
+  @@unique([novelId, chapterNumber])
+  @@map("chapters")
+}
+
+// ===== 3.2 充值订阅 =====
+
+model Product {
+  id                String   @id @default(cuid())
+  productId         String   @unique
+  name              String
+  type              String
+  os                String
+  price             Int
+  coins             Int?
+  subscriptionDuration String?
+  productIdExternal String?
+  status            String   @default("active")
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paymentWallProducts PaymentWallProduct[]
+  createdByUser User? @relation("ProductCreatedBy", fields: [createdBy], references: [id])
+  @@map("products")
+}
+
+model PaymentWall {
+  id             String   @id @default(cuid())
+  paymentWallId  String   @unique
+  name           String
+  userSegmentId  String?
+  sort           Int      @default(0)
+  status         String   @default("active")
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userSegment    UserSegment? @relation(fields: [userSegmentId], references: [id])
+  products       PaymentWallProduct[]
+  createdByUser  User? @relation("PaymentWallCreatedBy", fields: [createdBy], references: [id])
+  @@map("payment_walls")
+}
+
+model PaymentWallProduct {
+  id                String   @id @default(cuid())
+  paymentWallId     String
+  productId         String
+  type              String
+  bonusCoins        Int?
+  isDefaultSelected Boolean  @default(false)
+  showBadge         Boolean  @default(false)
+  marketingText     String?
+  subscriptionText  String?
+  sort              Int      @default(0)
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paymentWall PaymentWall @relation(fields: [paymentWallId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+  createdByUser User? @relation("PaymentWallProductCreatedBy", fields: [createdBy], references: [id])
+  @@map("payment_wall_products")
+}
+
+// ===== 3.3 投放管理 =====
+
+model LandingPage {
+  id             String   @id @default(cuid())
+  name           String
+  novelId        String
+  mediaChannel   String
+  language       String   @default("english")
+  os             String
+  openChapter    Int      @default(1)
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  novel      Novel @relation(fields: [novelId], references: [id])
+  createdByUser User? @relation("LandingPageCreatedBy", fields: [createdBy], references: [id])
+  @@map("landing_pages")
+}
+
+model FBAuthorization {
+  id             String   @id @default(cuid())
+  userId         String
+  tokenExpiry    DateTime
+  adAccounts     String
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdByUser User? @relation("FBAuthCreatedBy", fields: [createdBy], references: [id])
+  @@map("fb_authorizations")
+}
+
+// ===== 3.4 分销管理 =====
+
+model PromoCode {
+  id          String   @id @default(cuid())
+  codeId      String   @unique
+  novelId     String
+  channelName String
+  code        String
+  status      String   @default("active")
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  novel       Novel @relation(fields: [novelId], references: [id])
+  createdByUser User? @relation("PromoCodeCreatedBy", fields: [createdBy], references: [id])
+  @@map("promo_codes")
+}
+
+model Channel {
+  id           String   @id @default(cuid())
+  channelId    String   @unique
+  name         String
+  secret       String
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdByUser User? @relation("ChannelCreatedBy", fields: [createdBy], references: [id])
+  @@map("channels")
+}
+
+// ===== 3.5 订单管理 =====
+
+model Order {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  storeOrderId    String?
+  userId          String
+  productName     String
+  productType     String
+  productPrice    Int
+  paymentMethod   String?
+  status          String
+  promoCode       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user AppUser @relation(fields: [userId], references: [id])
+  @@map("orders")
+}
+
+// ===== 3.6 运营管理 =====
+
+model UserSegment {
+  id             String   @id @default(cuid())
+  segmentId      String   @unique
+  name           String
+  conditions     String
+  osCondition    String?
+  systemLanguage String?
+  countryLevels  String
+  status         String   @default("active")
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  paymentWalls    PaymentWall[]
+  pricingTiers    PricingTier[]
+  createdByUser   User? @relation("UserSegmentCreatedBy", fields: [createdBy], references: [id])
+  @@map("user_segments")
+}
+
+model PricingTier {
+  id                    String   @id @default(cuid())
+  pricingTierId         String   @unique
+  name                  String
+  userSegmentId         String
+  defaultChapterPrice   Int
+  sort                  Int      @default(0)
+  status                String   @default("active")
+  createdBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userSegment    UserSegment @relation(fields: [userSegmentId], references: [id])
+  novelConfigs   PricingTierNovel[]
+  createdByUser  User? @relation("PricingTierCreatedBy", fields: [createdBy], references: [id])
+  @@map("pricing_tiers")
+}
+
+model PricingTierNovel {
+  id                  String   @id @default(cuid())
+  pricingTierId       String
+  novelId             String
+  uniformChapterPrice Int?
+  createdBy           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  pricingTier      PricingTier @relation(fields: [pricingTierId], references: [id])
+  novel            Novel @relation(fields: [novelId], references: [id])
+  ranges           PricingTierNovelRange[]
+  createdByUser    User? @relation("PricingTierNovelCreatedBy", fields: [createdBy], references: [id])
+  @@unique([pricingTierId, novelId])
+  @@map("pricing_tier_novels")
+}
+
+model PricingTierNovelRange {
+  id              String   @id @default(cuid())
+  pricingTierNovelId String
+  startChapter    Int
+  endChapter      Int
+  price           Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  pricingTierNovel PricingTierNovel @relation(fields: [pricingTierNovelId], references: [id])
+  @@map("pricing_tier_novel_ranges")
+}
+
+// ===== 管理后台基础功能 =====
+
+// 部门管理
+model Department {
+  id        String   @id @default(cuid())
+  deptId    String   @unique
+  name      String
+  parentId  String?
+  sort      Int      @default(0)
+  status    String   @default("active")
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent    Department?  @relation("DeptParent", fields: [parentId], references: [id])
+  children  Department[] @relation("DeptParent")
+  users     User[]
+  @@map("departments")
+}
+
+// 角色管理
+model Role {
+  id          String   @id @default(cuid())
+  roleId      String   @unique
+  name        String
+  code        String   @unique
+  description String?
+  status      String   @default("active")
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       User[]
+  @@map("roles")
+}
+
+// 菜单管理
+model Menu {
+  id        String   @id @default(cuid())
+  menuId    String   @unique
+  name      String
+  path      String?
+  icon      String?
+  component String?
+  parentId  String?
+  sort      Int      @default(0)
+  type      String   @default("menu") // menu: 菜单, button: 按钮
+  status    String   @default("active")
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent     Menu?     @relation("MenuParent", fields: [parentId], references: [id])
+  children   Menu[]    @relation("MenuParent")
+  permissions RolePermission[]
+  @@map("menus")
+}
+
+// 角色菜单权限关联
+model RolePermission {
+  id         String   @id @default(cuid())
+  roleId     String
+  menuId     String
+  permission String?  // 权限标识，如: create, update, delete
+  createdAt  DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id])
+  menu Menu @relation(fields: [menuId], references: [id])
+  @@unique([roleId, menuId, permission])
+  @@map("role_permissions")
+}
+
+// 登录日志
+model LoginLog {
+  id         String   @id @default(cuid())
+  userId     String
+  username   String
+  ip         String?
+  userAgent  String?
+  status     String   @default("success") // success, failed
+  message    String?
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id])
+  @@map("login_logs")
+}
+
+// 操作日志
+model OperationLog {
+  id         String   @id @default(cuid())
+  userId     String
+  username   String
+  module     String   // 操作模块
+  action     String   // 操作动作
+  method     String   // 请求方法
+  url        String   // 请求URL
+  params     String?  // 请求参数
+  ip         String?
+  userAgent  String?
+  status     String   @default("success") // success, failed
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id])
+  @@map("operation_logs")
+}
