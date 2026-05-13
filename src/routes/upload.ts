@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { successResponse, errorResponse } from '../utils/helpers';
 import { authMiddleware } from '../middleware/auth';
 
@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `${randomUUID()}${ext}`;
     cb(null, filename);
   },
 });
@@ -47,6 +47,13 @@ const upload = multer({
     fileSize: 2 * 1024 * 1024, // 2MB
   },
 });
+
+// 错误处理中间件
+function asyncHandler(fn: (req: Request, res: Response, ...args: any[]) => Promise<any>) {
+  return (req: Request, res: Response, next: any) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
 
 // 封面上传
 router.post('/cover', authMiddleware, upload.single('file'), asyncHandler(async (req: Request, res: Response) => {
@@ -82,12 +89,5 @@ router.post('/file', authMiddleware, upload.single('file'), asyncHandler(async (
     url,
   }, '上传成功');
 }));
-
-// 错误处理中间件
-function asyncHandler(fn: (req: Request, res: Response, ...args: any[]) => Promise<any>) {
-  return (req: Request, res: Response, next: any) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
 
 export default router;
