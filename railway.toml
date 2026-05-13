@@ -3,14 +3,7 @@ entrypoint = "node dist/index.js"
 
 [build]
 builder = "nixpacks"
-buildCommand = """
-  # 替换 SQLite 为 PostgreSQL provider
-  sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
-  sed -i 's|url      = "file:./dev.db"|url      = env("DATABASE_URL")|' prisma/schema.prisma
-  npm install
-  npx prisma generate
-  npm run build
-"""
+buildCommand = "npm install && npx prisma generate && npm run build"
 
 [deploy]
 healthCheckPath = "/api/health"
@@ -18,4 +11,4 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 
 [nixpacks]
-  node_version = "20"
+node_version = "20"
