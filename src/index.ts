@@ -30,6 +30,8 @@ import departmentRoutes from './routes/department';
 import menuRoutes from './routes/menu';
 import operationLogRoutes from './routes/operationLog';
 import uploadRoutes from './routes/upload';
+import columnRoutes from './routes/column';
+import homepageStrategyRoutes from './routes/homepageStrategy';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -72,6 +74,8 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/operation-logs', operationLogRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/columns', columnRoutes);
+app.use('/api/homepage-strategies', homepageStrategyRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

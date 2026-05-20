@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -41,6 +41,8 @@ model User {
   createdPricingTierNovels PricingTierNovel[] @relation("PricingTierNovelCreatedBy")
   createdUserSegments   UserSegment[]   @relation("UserSegmentCreatedBy")
   createdPaymentWallProducts PaymentWallProduct[] @relation("PaymentWallProductCreatedBy")
+  createdColumns         Column[]         @relation("ColumnCreatedBy")
+  createdHomepageStrategies HomepageStrategy[] @relation("HomepageStrategyCreatedBy")
   
   dept              Department?  @relation(fields: [deptId], references: [id])
   userRole          Role?        @relation(fields: [roleId], references: [id])
@@ -123,6 +125,7 @@ model Novel {
   landingPages    LandingPage[]
   promoCodes      PromoCode[]
   pricingTierNovels PricingTierNovel[]
+  columnNovels     ColumnNovel[]
   createdByUser   User? @relation("NovelCreatedBy", fields: [createdBy], references: [id])
   @@map("novels")
 }
@@ -306,6 +309,7 @@ model UserSegment {
 
   paymentWalls    PaymentWall[]
   pricingTiers    PricingTier[]
+  homepageStrategies HomepageStrategy[]
   createdByUser   User? @relation("UserSegmentCreatedBy", fields: [createdBy], references: [id])
   @@map("user_segments")
 }
@@ -464,4 +468,83 @@ model OperationLog {
 
   user       User @relation(fields: [userId], references: [id])
   @@map("operation_logs")
+}
+
+// ===== 3.7 栏目管理 =====
+
+model Column {
+  id             String   @id @default(cuid())
+  columnId       String   @unique
+  name           String
+  terminal       String   // JSON array: ["app", "h5"]
+  language       String
+  style          String   // horizontal_list, vertical_list, banner
+  recommendMode  String   // auto, manual
+  recommendRules String?  // JSON string for auto recommend rules
+  status         String   @default("active") // active, inactive
+  sort           Int      @default(0)
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  columnNovels     ColumnNovel[]
+  strategyColumns  HomepageStrategyColumn[]
+  createdByUser    User?     @relation("ColumnCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("columns")
+}
+
+model ColumnNovel {
+  id        String   @id @default(cuid())
+  columnId  String
+  novelId   String
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@unique([columnId, novelId])
+  @@map("column_novels")
+}
+
+// ===== 3.8 首页管理 =====
+
+model HomepageStrategy {
+  id            String   @id @default(cuid())
+  strategyId    String   @unique
+  name          String
+  terminal      String   // app, h5
+  userSegmentId String
+  priority      Int      @default(0)
+  status        String   @default("active") // active, inactive
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userSegment   UserSegment @relation(fields: [userSegmentId], references: [id])
+  strategyColumns HomepageStrategyColumn[]
+  createdByUser User?        @relation("HomepageStrategyCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("homepage_strategies")
+}
+
+model HomepageStrategyColumn {
+  id         String   @id @default(cuid())
+  strategyId String
+  columnId   String
+  sort       Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  strategy   HomepageStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  column     Column         @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([strategyId, columnId])
+  @@map("homepage_strategy_columns")
 }

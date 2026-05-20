@@ -5,6 +5,29 @@ import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
+// 获取小说选项列表（用于下拉选择）
+router.get('/options', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+  const novels = await prisma.novel.findMany({
+    where: { status: 'online' },
+    select: {
+      id: true,
+      novelId: true,
+      name: true,
+      chineseName: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const data = novels.map(novel => ({
+    id: novel.id,
+    novelId: novel.novelId,
+    name: novel.name,
+    chineseName: novel.chineseName,
+  }));
+
+  return successResponse(res, data);
+}));
+
 // 获取小说列表
 router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { novelId, name, categoryId, copyrightName, status, startDate, endDate } = req.query as Record<string, string | undefined>;
